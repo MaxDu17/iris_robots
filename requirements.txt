@@ -1,0 +1,6 @@
+numpy==1.23.3
+dm-robotics-moma==0.4.0
+pyyaml
+torch
+torchvision
+rospkg
