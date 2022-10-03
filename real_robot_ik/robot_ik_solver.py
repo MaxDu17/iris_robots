@@ -3,7 +3,7 @@ from dm_control import mjcf
 from dm_robotics.moma.effectors import (arm_effector,
 										cartesian_6d_velocity_effector)
 from scipy.spatial.transform import Rotation as R
-from real_robot_ik.arm import FrankaArm
+from real_robot_ik.arm import FrankaArm, WidowX200Arm
 import torch
 
 def quat_diff(target, source, return_euler=False):
@@ -13,9 +13,13 @@ def quat_diff(target, source, return_euler=False):
 
 class RobotIKSolver:
 
-	def __init__(self, robot, control_hz=20):
+	def __init__(self, robot, control_hz=20, arm_name = 'franka'):
 		self._robot = robot
-		self._arm = FrankaArm()
+
+		if arm_name == 'franka':
+			self._arm = FrankaArm()
+		elif arm_name == 'wx200':
+			self._arm = WidowX200Arm()
 
 		self._physics = mjcf.Physics.from_mjcf_model(self._arm.mjcf_model)
 		self._effector = arm_effector.ArmEffector(arm=self._arm,
@@ -46,21 +50,32 @@ class RobotIKSolver:
 
 		self._cart_effector_6d.after_compile(self._arm.mjcf_model, self._physics)
 
-	def compute(self, desired_ee_pos, desired_ee_quat):
+	def compute(self, desired_ee_pos, desired_ee_quat, joint_positions=None, joint_velocities=None, ee_pos=None, ee_quat=None):
 
-		qpos = self._robot.get_joint_positions().numpy()
-		qvel = self._robot.get_joint_velocities().numpy()
-		curr_pos, curr_quat = self._robot.get_ee_pose()
-		curr_pos, curr_quat = curr_pos.numpy(), curr_quat.numpy()
+		if joint_positions is None:
+			qpos = self._robot.get_joint_positions().numpy()
+			qvel = self._robot.get_joint_velocities().numpy()
+			curr_pos, curr_quat = self._robot.get_ee_pose()
+			curr_pos, curr_quat = curr_pos.numpy(), curr_quat.numpy()
+		else:
+			qpos = np.array(joint_positions)
+			qvel = np.array(joint_velocities)
+			curr_pos = np.array(ee_pos)
+			curr_quat = np.array(ee_quat)
 
+		print("ASDA")
 		lin_vel = desired_ee_pos - curr_pos
 		rot_vel = quat_diff(desired_ee_quat, curr_quat, return_euler=True)
 
+		print("ASDAB")
 		action = np.concatenate([lin_vel, rot_vel])
+		print("ASDAD")
 		self._arm.update_state(self._physics, qpos, qvel)
+		print("ASDAE")
 		self._cart_effector_6d.set_control(self._physics, action)
 		joint_vel_ctrl = self._physics.bind(self._arm.actuators).ctrl.copy()
-		
+
+		print("ASDAC")
 		desired_qpos = qpos + joint_vel_ctrl
 		success = np.any(joint_vel_ctrl) #I think it returns zeros when it fails
 
