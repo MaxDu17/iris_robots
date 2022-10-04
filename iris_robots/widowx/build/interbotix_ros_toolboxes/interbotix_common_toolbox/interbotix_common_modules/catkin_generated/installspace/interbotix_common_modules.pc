@@ -1,0 +1,8 @@
+prefix=/iris/u/jyang27/dev/iris_robots/iris_robots/widowx/install
+
+Name: interbotix_common_modules
+Description: Description of interbotix_common_modules
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

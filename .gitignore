@@ -1,2 +1,4 @@
-widowx/interbotix_workspace/build
-widowx/interbotix_workspace/devel
+iris_robots/widowx/interbotix_workspace/build
+iris_robots/widowx/interbotix_workspace/devel
+*.pyc
+
