@@ -92,17 +92,15 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
         self.core.pub_group.publish(joint_commands)
 
 
-class WidowX200Robot:
-    def __init__(self, control_hz=20):
-        '''
-        Note: need to init rospy node
-        '''
-        self.dxl = InterbotixRobotXSCore('wx200', None, True)
-        self.arm = ModifiedInterbotixArmXSInterface(self.dxl, 'wx200', 'arm', 2.0, 0.3)
+class WidowXRobot:
+    def __init__(self, control_hz=20, robot_model='wx250s'):
+        self.robot_model = robot_model
+        self.dxl = InterbotixRobotXSCore(robot_model, None, True)
+        self.arm = ModifiedInterbotixArmXSInterface(self.dxl, robot_model, 'arm', 2.0, 0.3)
 
         self._joint_lock = Lock()
         self._angles, self._velocities = {}, {}
-        rospy.Subscriber(f"/wx200/joint_states", JointState, self._joint_callback)
+        rospy.Subscriber(f"/{robot_model}/joint_states", JointState, self._joint_callback)
         time.sleep(1)
         self._n_errors = 0
 
@@ -117,7 +115,7 @@ class WidowX200Robot:
                                      [-1.0, 0, 0]])
         self.default_rot = DEFAULT_ROTATION
 
-        self._gripper = GripperController('wx200')
+        self._gripper = GripperController(robot_model)
         #self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
 
     def _joint_callback(self, msg):
@@ -190,7 +188,14 @@ class WidowX200Robot:
         '''Returns [yaw, pitch, roll]'''
         return quat_to_euler(self.get_ee_pose()[1])
 
+class WidowX200Robot(WidowXRobot):
+    def __init__(self, control_hz=20):
+        super().__init__(control_hz=control_hz, robot_model='wx200')
+
+class WidowX250SRobot(WidowXRobot):
+    def __init__(self, control_hz=20):
+        super().__init__(control_hz=control_hz, robot_model='wx250s')
 
 if __name__ == '__main__':
-    robot = WidowX200Robot()
+    robot = WidowX250SRobot()
     import pdb; pdb.set_trace()

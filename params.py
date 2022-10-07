@@ -10,4 +10,8 @@ ROBOT_PARAMS = dict(
         'num_joints': 5,
         'reset_joints': np.array([0, -0.5, 0.5, np.pi / 2, 0.])
     }),
+    'wx250s': dict({
+        'num_joints': 6,
+        'reset_joints': np.array([0, -0.3, 0.3, 0, np.pi / 2, 0])
+    }),
 })

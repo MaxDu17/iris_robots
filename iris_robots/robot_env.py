@@ -15,7 +15,7 @@ from iris_robots.server.robot_interface import RobotInterface
 
 class RobotEnv(gym.Env):
     
-    def __init__(self, ip_address=None, robot_model='franka', use_local_cameras=True, use_robot_cameras=False):
+    def __init__(self, ip_address=None, robot_model='franka', use_local_cameras=False, use_robot_cameras=False):
         
         # Initialize Gym Environment
         super().__init__()
@@ -36,6 +36,9 @@ class RobotEnv(gym.Env):
             elif robot_model == 'wx200':
                 from iris_robots.widowx.robot import WidowX200Robot
                 self._robot = WidowX200Robot(control_hz=self.hz)
+            elif robot_model == 'wx250s':
+                from iris_robots.widowx.robot import WidowX250SRobot
+                self._robot = WidowX250SRobot(control_hz=self.hz)
             else:
                 raise NotImplementedError
 
