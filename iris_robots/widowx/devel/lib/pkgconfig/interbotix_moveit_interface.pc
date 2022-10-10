@@ -1,8 +1,0 @@
-prefix=/iris/u/jyang27/dev/iris_robots/iris_robots/widowx/devel
-
-Name: interbotix_moveit_interface
-Description: Description of interbotix_moveit_interface
-Version: 0.0.0
-Cflags: -I/iris/u/jyang27/dev/iris_robots/iris_robots/widowx/devel/include -I/iris/u/jyang27/dev/iris_robots/iris_robots/widowx/src/interbotix_ros_toolboxes/interbotix_common_toolbox/interbotix_moveit_interface/include
-Libs: -L${prefix}/lib 
-Requires: geometry_msgs message_runtime moveit_commander moveit_ros_planning_interface moveit_visual_tools roscpp rospy std_msgs tf
