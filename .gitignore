@@ -1,4 +1,5 @@
-iris_robots/widowx/interbotix_workspace/build
-iris_robots/widowx/interbotix_workspace/devel
+iris_robots/widowx/build
+iris_robots/widowx/devel
+iris_robot/widowx/src
 *.pyc
 

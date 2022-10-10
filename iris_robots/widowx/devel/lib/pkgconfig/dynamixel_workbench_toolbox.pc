@@ -1,8 +1,0 @@
-prefix=/iris/u/jyang27/dev/iris_robots/iris_robots/widowx/devel
-
-Name: dynamixel_workbench_toolbox
-Description: Description of dynamixel_workbench_toolbox
-Version: 2.2.0
-Cflags: -I/iris/u/jyang27/dev/iris_robots/iris_robots/widowx/src/interbotix_ros_core/interbotix_ros_xseries/dynamixel_workbench_toolbox/include
-Libs: -L${prefix}/lib -ldynamixel_workbench_toolbox
-Requires: roscpp dynamixel_sdk
