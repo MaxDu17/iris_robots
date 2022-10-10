@@ -1,6 +1,7 @@
 from iris_robots.camera_utils.camera_thread import CameraThread
 from iris_robots.camera_utils.realsense_camera import gather_realsense_cameras
 from iris_robots.camera_utils.zed_camera import gather_zed_cameras
+from iris_robots.camera_utils.cv2_camera import gather_cv2_cameras
 import time
 
 class MultiCameraWrapper:
@@ -19,11 +20,15 @@ class MultiCameraWrapper:
 			zed_cameras = gather_zed_cameras()
 			self._all_cameras.extend(zed_cameras)
 
+		if 'cv2' in camera_types:
+			cv2_cameras = gather_cv2_cameras()
+			self._all_cameras.extend(cv2_cameras)
+
 		if use_threads:
 			for i in range(len(self._all_cameras)):
 				self._all_cameras[i] = CameraThread(self._all_cameras[i])
 			time.sleep(1)
-	
+
 	def read_cameras(self):
 		all_frames = []
 		for camera in self._all_cameras:

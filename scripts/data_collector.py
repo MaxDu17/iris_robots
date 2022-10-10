@@ -33,7 +33,7 @@ def process_observation(obs):
 	return {camera_feed['serial_number']: process_image(camera_feed['array']) \
 		for camera_feed in obs['images'] if camera_feed['type'] == 'rgb'}
 
-class DataCollecter:
+class DataCollector:
 
 	def __init__(self, env, controller, policy=None):
 		self.env = env

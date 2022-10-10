@@ -15,7 +15,8 @@ from iris_robots.server.robot_interface import RobotInterface
 
 class RobotEnv(gym.Env):
     
-    def __init__(self, ip_address=None, robot_model='franka', use_local_cameras=False, use_robot_cameras=False):
+    def __init__(self, ip_address=None, robot_model='franka', use_local_cameras=False, use_robot_cameras=False,
+            camera_types=['cv2']):
         
         # Initialize Gym Environment
         super().__init__()
@@ -53,7 +54,7 @@ class RobotEnv(gym.Env):
         self._use_robot_cameras = use_robot_cameras
         
         if self._use_local_cameras:
-            self._camera_reader = MultiCameraWrapper()
+            self._camera_reader = MultiCameraWrapper(camera_types=camera_types)
 
         self.reset()
 

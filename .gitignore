@@ -1,5 +1,5 @@
 iris_robots/widowx/build
 iris_robots/widowx/devel
-iris_robot/widowx/src
+iris_robots/widowx/src/*
 *.pyc
 

@@ -1,6 +1,6 @@
 from robot_env import RobotEnv
 from controllers.oculus_controller import VRPolicy
-from data_collector import DataCollecter
+from data_collector import DataCollector
 from user_interface.gui import RobotGUI
 import numpy as np
 import torch
@@ -14,7 +14,7 @@ env = RobotEnv('172.16.0.1')
 controller = VRPolicy()
 
 # Make the data collector
-data_collector = DataCollecter(env=env, controller=controller, policy=policy)
+data_collector = DataCollector(env=env, controller=controller, policy=policy)
 
 # Make the GUI
 user_interface = RobotGUI(robot=data_collector)
