@@ -16,7 +16,7 @@ import math
 import os
 
 # Internal Imports #
-from user_interface.text import *
+from iris_robots.user_interface.text import *
 from parameters import *
 
 """

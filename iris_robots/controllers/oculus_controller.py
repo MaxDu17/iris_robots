@@ -1,4 +1,4 @@
-from oculus_reader.oculus_reader.reader import OculusReader
+from oculus_reader.reader import OculusReader
 from iris_robots.transformations import quat_to_euler, euler_to_quat, quat_diff, rmat_to_quat
 import threading
 import numpy as np
@@ -19,7 +19,7 @@ class VRPolicy:
                  max_lin_vel: float = 1,
                  max_rot_vel: float = 1,
                  spatial_coeff: float = 1,
-                 pos_action_gain: float = 20,
+                 pos_action_gain: list = [20, 20, 20],
                  rot_action_gain: float = 20,
                  gripper_action_gain: float = 1,
                  rmat_reorder: list = [-2, -1, -3, 4]):
@@ -31,7 +31,7 @@ class VRPolicy:
         self.max_lin_vel = max_lin_vel
         self.max_rot_vel = max_rot_vel
         self.spatial_coeff = spatial_coeff
-        self.pos_action_gain = pos_action_gain
+        self.pos_action_gain = np.array(pos_action_gain)
         self.rot_action_gain = rot_action_gain
         self.gripper_action_gain = gripper_action_gain
         self.global_to_env_mat = vec_to_reorder_mat(rmat_reorder)

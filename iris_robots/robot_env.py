@@ -15,8 +15,8 @@ from iris_robots.server.robot_interface import RobotInterface
 
 class RobotEnv(gym.Env):
     
-    def __init__(self, ip_address=None, robot_model='franka', use_local_cameras=False, use_robot_cameras=False,
-            camera_types=['cv2']):
+    def __init__(self, ip_address=None, robot_model='franka', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
+            camera_types=['cv2'], blocking=True):
         
         # Initialize Gym Environment
         super().__init__()
@@ -26,7 +26,8 @@ class RobotEnv(gym.Env):
         self.max_lin_vel = 1.0
         self.max_rot_vel = 1.0
         self.DoF = 6
-        self.hz = 20
+        self.hz = control_hz
+        self.blocking=blocking
 
         # Robot Configuration
         self.robot_model = robot_model
@@ -39,7 +40,7 @@ class RobotEnv(gym.Env):
                 self._robot = WidowX200Robot(control_hz=self.hz)
             elif robot_model == 'wx250s':
                 from iris_robots.widowx.robot import WidowX250SRobot
-                self._robot = WidowX250SRobot(control_hz=self.hz)
+                self._robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
             else:
                 raise NotImplementedError
 
@@ -83,6 +84,7 @@ class RobotEnv(gym.Env):
                               'angle': self._robot.get_ee_angle(),
                               'gripper': 0}
         self._default_angle = self._desired_pose['angle']
+        time.sleep(2.5)
         return self.get_observation()
 
     def _format_action(self, action):

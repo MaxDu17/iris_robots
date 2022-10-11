@@ -4,38 +4,14 @@ import numpy as np
 import time
 import os
 
-
-from torchvision.transforms import ColorJitter, RandomResizedCrop, AugMix
-from torchvision import transforms as T
-from utils.file_utils import crawler
 from PIL import Image
 import numpy as np
 import time
-import rlkit.torch.pytorch_util as ptu
 
-jitter = ColorJitter((0.75, 1.25), (0.9, 1.1), (0.9, 1.1), (-0.1, 0.1))
-crop = RandomResizedCrop((96, 128), (0.9, 1.0), (0.9, 1.1), interpolation=T.InterpolationMode.LANCZOS)
-aug_mix = AugMix()
-
-def augment_img(img, apply_aug_mix=True, apply_color_jitter=False, apply_random_crop=False):
-	img = Image.fromarray(img, mode='RGB')
-	if apply_aug_mix: img = aug_mix(img)
-	if apply_color_jitter: img = jitter(img)
-	if apply_random_crop: img = crop(img)
-	return np.array(img)
-
-def process_image(img):
-	img = augment_img(img).transpose(2,0,1)
-	img = ptu.from_numpy(img).unsqueeze(0) / 255.
-	return img
-
-def process_observation(obs):
-	return {camera_feed['serial_number']: process_image(camera_feed['array']) \
-		for camera_feed in obs['images'] if camera_feed['type'] == 'rgb'}
 
 class DataCollector:
 
-	def __init__(self, env, controller, policy=None):
+	def __init__(self, env, controller, policy=None, log_dir=None):
 		self.env = env
 		self.num_cameras = self.env.num_cameras
 		self.traj_running = False
@@ -43,7 +19,10 @@ class DataCollector:
 		self.controller = controller
 		self.policy = policy
 		self.traj_num = 0
-		self.log_dir = '/Users/sasha/Desktop/irisnet_mac/{0}/'.format(date.today())
+		self.log_dir = log_dir
+		if log_dir is None:
+			import iris_robots
+			self.log_dir=os.path.join(os.path.dirname(iris_robots.__file__), 'training_data')
 
 		# self.log_dir = '/home/sasha/Desktop/irisnet/{0}/'.format(date.today())
 
@@ -70,7 +49,7 @@ class DataCollector:
 		if self.traj_saved: return
 		print('Saving Trajectory #{0}'.format(self.traj_num))
 
-		filepath = os.path.join(self.log_dir + self.traj_name + '.npy')
+		filepath = os.path.join(self.log_dir, self.traj_name + '.npy')
 		os.makedirs(self.log_dir, exist_ok=True)
 		np.save(filepath, self.traj_data)
 
@@ -116,7 +95,6 @@ class DataCollector:
 				print('Std Delay: ', np.array(delays).std())
 				print('Min Delay: ', np.array(delays).min())
 				print('Max Delay: ', np.array(delays).max())
-
 				self.traj_running = False
 				if save: self.save_trajectory()
 				return

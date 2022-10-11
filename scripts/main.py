@@ -1,13 +1,11 @@
-from robot_env import RobotEnv
-from controllers.oculus_controller import VRPolicy
-from data_collector import DataCollector
-from user_interface.gui import RobotGUI
+from iris_robots.robot_env import RobotEnv
+from iris_robots.controllers.oculus_controller import VRPolicy
+from iris_robots.data_collection.data_collector import DataCollector
+from iris_robots.user_interface.gui import RobotGUI
 import numpy as np
 import torch
 
-policy = torch.load('/Users/sasha/Desktop/robot_training/run1/id0/models/2.pt')
-
-policy.eval()
+policy = None
 
 # Make the robot env
 env = RobotEnv('172.16.0.1')

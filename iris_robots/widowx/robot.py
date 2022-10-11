@@ -93,7 +93,7 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
 
 
 class WidowXRobot:
-    def __init__(self, control_hz=20, robot_model='wx250s'):
+    def __init__(self, control_hz=20, robot_model='wx250s', blocking=True):
         self.robot_model = robot_model
         self.dxl = InterbotixRobotXSCore(robot_model, None, True)
         self.arm = ModifiedInterbotixArmXSInterface(self.dxl, robot_model, 'arm', 2.0, 0.3)
@@ -116,6 +116,8 @@ class WidowXRobot:
         self.default_rot = DEFAULT_ROTATION
 
         self._gripper = GripperController(robot_model)
+        self.blocking = blocking
+
         #self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
 
     def _joint_callback(self, msg):
@@ -130,24 +132,42 @@ class WidowXRobot:
     def kill_robot(self):
         self._robot_process.terminate()
 
-    def update_pose(self, pos, angle):
+    def update_pose(self, pos, angle, duration=1.5):
         '''Expect [x,y,z], [yaw, pitch, roll]'''
 
         new_pose = np.eye(4)
         new_pose[:3, -1] = pos
         new_quat = Quaternion(euler_to_quat(angle))
         new_pose[:3, :3] = new_quat.rotation_matrix
-        self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(), execute=True)
+
+        if not self.blocking:
+            solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
+                                                                     execute=True)
+        else:
+            solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
+                                                                moving_time=duration, accel_time=duration * 0.45)
 
         return pos, angle
 
-    def update_joints(self, joints):
-        joints = torch.Tensor(joints)
-        self.arm.publish_positions_fast(joints)
+    def update_joints(self, joints, duration=1.5):
+        if not self.blocking:
+            self.arm.publish_positions_fast(joints)
+        else:
+            self.arm.publish_positions(joints, moving_time=duration, accel_time=duration * 0.45)
 
     def update_gripper(self, close_percentage):
         desired_gripper = np.clip(1 - close_percentage, 0.05, 1)
         self._gripper.set_continuous_position(desired_gripper)
+        if self.blocking:
+            time.sleep(0.5)
+            '''
+            while np.abs(self._gripper.get_continuous_position() - desired_gripper) > 0.05:
+                print(self._gripper.get_continuous_position(), desired_gripper)
+                self._gripper.set_continuous_position(desired_gripper)
+                if self._gripper._velocities['left_finger'] < 0.01:
+                    break
+                time.sleep(0.01)
+            '''
 
     def get_joint_positions(self):
         with self._joint_lock:
@@ -189,12 +209,12 @@ class WidowXRobot:
         return quat_to_euler(self.get_ee_pose()[1])
 
 class WidowX200Robot(WidowXRobot):
-    def __init__(self, control_hz=20):
-        super().__init__(control_hz=control_hz, robot_model='wx200')
+    def __init__(self, control_hz=20, blocking=True):
+        super().__init__(control_hz=control_hz, robot_model='wx200', blocking=blocking)
 
 class WidowX250SRobot(WidowXRobot):
-    def __init__(self, control_hz=20):
-        super().__init__(control_hz=control_hz, robot_model='wx250s')
+    def __init__(self, control_hz=20, blocking=True):
+        super().__init__(control_hz=control_hz, robot_model='wx250s', blocking=blocking)
 
 if __name__ == '__main__':
     robot = WidowX250SRobot()
