@@ -6,6 +6,7 @@ import iris_robots
 import numpy as np
 import torch
 import time
+import os
 
 policy = None
 
@@ -18,15 +19,15 @@ controller = VRPolicy(pos_action_gain=[20, 20, 20],
 
 # Make the data collector
 log_dir = os.path.join(os.path.dirname(iris_robots.__file__), 'training_data')
-log_dir = os.path.join(log_dir, "Purple Pen Grasp")
+log_dir = os.path.join(log_dir, "purple_marker_grasp_new")
 data_collector = DataCollector(env=env, controller=controller, policy=policy, log_dir=log_dir)
 
 # Collect and save trajectories
 for i in range(50):
-    print("Trajectory {i}")
+    print("Trajectory {}".format(i))
     data_collector.collect_trajectory()
     time.sleep(5)
 
-o
+
 
 

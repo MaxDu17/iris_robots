@@ -91,10 +91,6 @@ class DataCollector:
 
 			# End Episode Appropriately #
 			if end_traj:
-				print('Avg Delay: ', np.array(delays).mean())
-				print('Std Delay: ', np.array(delays).std())
-				print('Min Delay: ', np.array(delays).min())
-				print('Max Delay: ', np.array(delays).max())
 				self.traj_running = False
 				if save: self.save_trajectory()
 				return
