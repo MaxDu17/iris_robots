@@ -77,6 +77,18 @@ class RobotEnv(gym.Env):
         sleep_left = max(0, (1 / self.hz) - comp_time)
         time.sleep(sleep_left)
 
+
+    def step_direct(self, action):
+        start_time = time.time()
+        assert len(action) == 7 #position, angle, gripper
+        desired_pos = self._curr_pos + action[:3]
+        desired_angle = add_angles(action[3:6], self._curr_angle)
+
+        self._update_robot(desired_pos, desired_angle, action[6])
+        comp_time = time.time() - start_time
+        sleep_left = max(0, (1 / self.hz) - comp_time)
+        time.sleep(sleep_left)
+
     def reset(self):
         self._robot.update_gripper(0)
         self._robot.update_joints(self.reset_joints)
