@@ -2,8 +2,6 @@ numpy==1.23.3
 dm-robotics-moma==0.4.0
 matplotlib
 pyyaml
-torch
-torchvision
 rospkg
 pyquaternion
 pyrealsense2

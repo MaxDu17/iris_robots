@@ -4,7 +4,7 @@ import numpy as np
 ROBOT_PARAMS = dict(
     {'franka': dict({
         'num_joints': 7,
-        'reset_joints': np.array([0., -np.pi / 4, 0, -3 / 4 * np.pi, 0, np.pi / 2, 0.])
+        'reset_joints': np.array([0., -0.24, 0, - 9 / 10 * np.pi, 0,  5 / 6 * np.pi, np.pi / 4])
     }),
     'wx200': dict({
         'num_joints': 5,

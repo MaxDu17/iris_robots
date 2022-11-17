@@ -1,9 +1,8 @@
 ''' Robot Server Environment Wrapper'''
 
 # ROBOT SPECIFIC IMPORTS
-from polymetis import RobotInterface, GripperInterface
 from iris_robots.real_robot_ik.robot_ik_solver import RobotIKSolver
-import grpc
+#import grpc
 
 # UTILITY SPECIFIC IMPORTS
 from iris_robots.transformations import euler_to_quat, quat_to_euler
@@ -17,11 +16,13 @@ import os
 class FrankaRobot:
     def __init__(self, control_hz=20):
         #self.launch_robot()
+        from polymetis import RobotInterface, GripperInterface
 
         self._robot = RobotInterface(ip_address="localhost")
         self._gripper = GripperInterface(ip_address="localhost")
         self._ik_solver = RobotIKSolver(self._robot, control_hz=control_hz)
-        self._max_gripper_width = self._gripper.get_state().max_width
+        self._max_gripper_width = self._gripper.metadata.max_width 
+        self._gripper_min = 0
 
     def launch_robot(self):
         self._robot_process = run_terminal_command('bash ' + os.getcwd() + '/franka/launch_robot.sh')
@@ -55,8 +56,10 @@ class FrankaRobot:
         self._robot.move_to_joint_positions(joints)
 
     def update_gripper(self, close_percentage):
-        desired_gripper = np.clip(1 - close_percentage, 0.05, 1)
-        self._gripper.goto(width=self._max_gripper_width * desired_gripper, speed=0.1, force=0.1)
+        print(close_percentage)
+        desired_gripper = np.clip(1 - close_percentage, 0.0, 1)
+        self._gripper.goto(width=self._max_gripper_width * desired_gripper + self._gripper_min, speed=0.1, force=0.1,
+                blocking=False)
 
     def get_joint_positions(self):
         return self._robot.get_joint_positions().numpy()
@@ -65,10 +68,10 @@ class FrankaRobot:
         return self._robot.get_joint_velocities().numpy()
 
     def get_gripper_state(self):
-        width_init = self._gripper.get_state().width / self._max_gripper_width
+        width_init = (self._gripper.get_state().width - self._gripper_min)/ self._max_gripper_width
         time_1 = time.time()
         
-        width = self._gripper.get_state().width / self._max_gripper_width
+        width = (self._gripper.get_state().width - self._gripper_min)/ self._max_gripper_width
         time_2 = time.time()
 
         vel = (width - width_init) / (time_2 - time_1)
@@ -85,3 +88,4 @@ class FrankaRobot:
         pos, quat = self._robot.get_ee_pose()
         angle = quat_to_euler(quat.numpy())
         return angle
+

@@ -20,7 +20,7 @@ class RobotIKSolver:
 			self._arm = FrankaArm()
 		elif arm_name == 'wx200':
 			self._arm = WidowX200Arm()
-
+	        
 		self._physics = mjcf.Physics.from_mjcf_model(self._arm.mjcf_model)
 		self._effector = arm_effector.ArmEffector(arm=self._arm,
 									action_range_override=None,
@@ -63,20 +63,16 @@ class RobotIKSolver:
 			curr_pos = np.array(ee_pos)
 			curr_quat = np.array(ee_quat)
 
-		print("ASDA")
 		lin_vel = desired_ee_pos - curr_pos
 		rot_vel = quat_diff(desired_ee_quat, curr_quat, return_euler=True)
 
-		print("ASDAB")
 		action = np.concatenate([lin_vel, rot_vel])
-		print("ASDAD")
 		self._arm.update_state(self._physics, qpos, qvel)
-		print("ASDAE")
 		self._cart_effector_6d.set_control(self._physics, action)
 		joint_vel_ctrl = self._physics.bind(self._arm.actuators).ctrl.copy()
 
-		print("ASDAC")
 		desired_qpos = qpos + joint_vel_ctrl
 		success = np.any(joint_vel_ctrl) #I think it returns zeros when it fails
 
 		return torch.Tensor(desired_qpos), success
+
