@@ -217,5 +217,5 @@ class WidowX250SRobot(WidowXRobot):
         super().__init__(control_hz=control_hz, robot_model='wx250s', blocking=blocking)
 
 if __name__ == '__main__':
-    robot = WidowX250SRobot()
+    robot = WidowX200Robot()
     import pdb; pdb.set_trace()
