@@ -126,11 +126,12 @@ class WidowXRobot:
                 self._angles[name] = position
                 self._velocities[name] = velocity
 
-    def launch_robot(self):
-        self._robot_process = run_terminal_command('bash ' + os.getcwd() + '/widowx/launch_robot.sh')
-
-    def kill_robot(self):
-        self._robot_process.terminate()
+    # don't use this for now 
+    # def launch_robot(self):
+    #     self._robot_process = run_terminal_command('bash ' + os.getcwd() + '/widowx/launch_robot.sh')
+    #
+    # def kill_robot(self):
+    #     self._robot_process.terminate()
 
     def update_pose(self, pos, angle, duration=1.5):
         '''Expect [x,y,z], [yaw, pitch, roll]'''

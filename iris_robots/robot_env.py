@@ -14,20 +14,29 @@ from iris_robots.camera_utils.multi_camera_wrapper import MultiCameraWrapper
 from iris_robots.server.robot_interface import RobotInterface
 
 class RobotEnv(gym.Env):
-    
-    def __init__(self, ip_address=None, robot_model='franka', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
-            camera_types=['cv2'], blocking=True):
-        
+    def __init__(self, ip_address=None, robot_model='dummy', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
+            camera_types=['cv2'], blocking=True, reset_pos = None, control_mode = "POSORIENT"):
         # Initialize Gym Environment
         super().__init__()
+        #TODO: allow for custom reset location
 
         # Physics
         self.use_desired_pose = True
         self.max_lin_vel = 1.0
         self.max_rot_vel = 1.0
-        self.DoF = 6
+
         self.hz = control_hz
         self.blocking=blocking
+
+        if control_mode == "POSORIENT":
+            self.DoF = 6
+        elif control_mode == "POS":
+            self.DoF = 3
+        else:
+            raise Exception("control mode not implemented!")
+
+        # TODO: turn this into an actual constraint box.
+        self.action_space = np.ones(shape = ((self.DoF + 1), 2))
 
         # Robot Configuration
         self.robot_model = robot_model
@@ -41,6 +50,9 @@ class RobotEnv(gym.Env):
             elif robot_model == 'wx250s':
                 from iris_robots.widowx.robot import WidowX250SRobot
                 self._robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
+            elif robot_model == 'dummy':
+                from iris_robots.dummy_robot import DummyRobot
+                self._robot = DummyRobot()
             else:
                 raise NotImplementedError
 
@@ -53,7 +65,7 @@ class RobotEnv(gym.Env):
         # Create Cameras
         self._use_local_cameras = use_local_cameras
         self._use_robot_cameras = use_robot_cameras
-        
+
         if self._use_local_cameras:
             self._camera_reader = MultiCameraWrapper(camera_types=camera_types)
 
@@ -70,7 +82,7 @@ class RobotEnv(gym.Env):
         lin_vel, rot_vel = self._limit_velocity(pos_action, angle_action)
         desired_pos = self._curr_pos + lin_vel
         desired_angle = add_angles(rot_vel, self._curr_angle)
-        
+
         self._update_robot(desired_pos, desired_angle, gripper)
 
         comp_time = time.time() - start_time
@@ -88,6 +100,9 @@ class RobotEnv(gym.Env):
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)
         time.sleep(sleep_left)
+
+    def reset_to(self, state):
+        raise Exception("not implemented yet!")
 
     def reset(self):
         self._robot.update_gripper(0)
@@ -128,7 +143,7 @@ class RobotEnv(gym.Env):
     def _update_robot(self, pos, angle, gripper):
         feasible_pos, feasible_angle = self._robot.update_pose(pos, angle)
         self._robot.update_gripper(gripper)
-        self._desired_pose = {'position': feasible_pos, 
+        self._desired_pose = {'position': feasible_pos,
                               'angle': feasible_angle,
                               'gripper': gripper}
 
@@ -181,6 +196,10 @@ class RobotEnv(gym.Env):
             state_dict = self.get_state()
             obs_dict.update(state_dict)
         return obs_dict
+
+    def render(self, height, width, mode):
+        #TODO: full sized image renderings!
+        return self.get_images()
 
     def is_robot_reset(self, epsilon=0.1):
         curr_joints = self._robot.get_joint_positions()
