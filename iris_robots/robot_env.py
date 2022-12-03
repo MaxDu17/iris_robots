@@ -7,6 +7,7 @@ Experiment Specific Functions: self.get_info(), self.get_reward(), self.get_obse
 import numpy as np
 import time
 import gym
+from gym import spaces
 from params import ROBOT_PARAMS
 
 from iris_robots.transformations import add_angles, angle_diff
@@ -35,8 +36,9 @@ class RobotEnv(gym.Env):
         else:
             raise Exception("control mode not implemented!")
 
-        # TODO: turn this into an actual constraint box.
-        self.action_space = np.ones(shape = ((self.DoF + 1), 2))
+        self.action_space = spaces.Box(np.array([-1,-1,-1,-1,-1,-1,-1]),np.array([1,1,1,1,1,1,1]),dtype=np.float32)
+        self.observation_space = spaces.Box(-1, 1,dtype=np.float32) # TODO figure out what is going on with this
+        #self.action_space = np.ones(shape = ((self.DoF + 1), 2))
 
         # Robot Configuration
         self.robot_model = robot_model
