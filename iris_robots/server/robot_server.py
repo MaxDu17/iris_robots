@@ -63,7 +63,7 @@ def get_gripper_state_request():
 def read_cameras():
     camera_feed = camera_reader.read_cameras()
     buffer = io.BytesIO()
-    
+
     np.savez_compressed(buffer, camera_feed)
     buffer.seek(0)
 
@@ -76,3 +76,22 @@ def start_server(robot, camera=None):
     robot_controller = robot
     camera_reader = camera
     app.run(host='0.0.0.0')
+
+if __name__ == "__main__":
+    robot_model = "dummy"
+    if robot_model == 'franka':
+        from iris_robots.franka.robot import FrankaRobot
+        robot = FrankaRobot(control_hz=self.hz)
+    elif robot_model == 'wx200':
+        from iris_robots.widowx.robot import WidowX200Robot
+        robot = WidowX200Robot(control_hz=self.hz)
+    elif robot_model == 'wx250s':
+        from iris_robots.widowx.robot import WidowX250SRobot
+        robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
+    elif robot_model == 'dummy':
+        from iris_robots.dummy_robot import DummyRobot
+        robot = DummyRobot()
+    else:
+        raise Exception("invalid config!")
+
+    start_server(robot)
