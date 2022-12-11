@@ -19,28 +19,42 @@ class XboxController:
 
         # Control Parameters
         self.threshold = 0.1
-        self.DoF = env._DoF
+        self.DoF = env.env.DoF
 
         # Save Gripper
         self.gripper_closed = False
         self.button_resetted = True
 
+    def cut(self, value):
+        EPSILON = 0.2
+        if abs(value) < EPSILON:
+            return 0
+        return value
+
     def get_action(self):
         pygame.event.get()
+        scaler = 0.005
 
         # XYZ Dimensions
-        x = - self.joystick.get_axis(1)
-        y = - self.joystick.get_axis(0)
-        z = (self.joystick.get_axis(5) - self.joystick.get_axis(2)) / 2
-
+        x = - scaler * self.cut(self.joystick.get_axis(1))
+        y = - scaler * self.cut(self.joystick.get_axis(0))
+        # y = - scaler * self.cut((self.joystick.get_button(2) - self.joystick.get_button(1)))#scaler * self.joystick.get_axis(1)
+        # y = - scaler * self.cut((self.joystick.get_button(2) - self.joystick.get_button(1)))#scaler * self.joystick.get_axis(1)
+        # z = (self.joystick.get_axis(5) - self.joystick.get_axis(2)) / 2
+        # z = self.joystick.get_axis(2)
+        # y = 0
+        z = scaler * (self.joystick.get_button(2) - self.joystick.get_button(1))
+        # print(x, y, z)
         # Orientation Dimensions
-        yaw = self.joystick.get_axis(3)
-        pitch = -self.joystick.get_axis(4)
-        roll = self.joystick.get_button(4) - self.joystick.get_button(5)
+        yaw = 0.1 * self.cut(self.joystick.get_axis(3))
+        pitch = - 0.1 * self.cut(self.joystick.get_axis(4))
+        roll = 0 #self.joystick.get_button(4) - self.joystick.get_button(5)
+        # print([self.joystick.get_axis(i) for i in range(6)])
+        # print([self.joystick.get_button(i) for i in range(6)])
 
         # Process Pose Action
         pose_action = np.array([x, y, z, roll, pitch, yaw])[:self.DoF]
-        pose_action[np.abs(pose_action) < self.threshold] = 0.
+        # pose_action[np.abs(pose_action) < self.threshold] = 0.
 
         # Process Gripper Action
         self._update_gripper_state(self.joystick.get_button(0))
