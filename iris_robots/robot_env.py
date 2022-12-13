@@ -37,7 +37,7 @@ class RobotEnv(gym.Env):
             raise Exception("control mode not implemented!")
 
         self.action_space = spaces.Box(np.array([-1,-1,-1,-1,-1,-1,-1]),np.array([1,1,1,1,1,1,1]),dtype=np.float32)
-        self.observation_space = spaces.Box(-1, 1,dtype=np.float32) # TODO figure out what is going on with this
+        self.observation_space = spaces.Box(-10, 10,dtype=np.float32) # TODO figure out what is going on with this
         #self.action_space = np.ones(shape = ((self.DoF + 1), 2))
 
         # Robot Configuration
@@ -48,7 +48,7 @@ class RobotEnv(gym.Env):
                 self._robot = FrankaRobot(control_hz=self.hz)
             elif robot_model == 'wx200':
                 from iris_robots.widowx.robot import WidowX200Robot
-                self._robot = WidowX200Robot(control_hz=self.hz)
+                self._robot = WidowX200Robot(control_hz=self.hz, blocking=blocking)
             elif robot_model == 'wx250s':
                 from iris_robots.widowx.robot import WidowX250SRobot
                 self._robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
@@ -90,6 +90,16 @@ class RobotEnv(gym.Env):
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)
         time.sleep(sleep_left)
+        return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
+
+    def get_reward(self):
+        return 0
+
+    def get_done(self):
+        return 0
+
+    def get_info(self):
+        return {}
 
 
     def step_direct(self, action):
@@ -99,14 +109,20 @@ class RobotEnv(gym.Env):
         desired_angle = add_angles(action[3:6], self._curr_angle)
 
         self._update_robot(desired_pos, desired_angle, action[6])
+        # print(desired_pos)
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)
         time.sleep(sleep_left)
+        return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
+
+    def update_robot(self, desired_pos, desired_angle, gripper):
+        self._update_robot(desired_pos, desired_angle, gripper)
 
     def reset_to(self, state):
         raise Exception("not implemented yet!")
 
     def reset(self):
+        print("resetting!")
         self._robot.update_gripper(0)
         self._robot.update_joints(self.reset_joints)
         self._desired_pose = {'position': self._robot.get_ee_pos(),

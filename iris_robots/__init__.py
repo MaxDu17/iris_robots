@@ -11,3 +11,8 @@ register(
     entry_point='iris_robots.robot_env:RobotEnv',
     kwargs = {"robot_model" : "dummy"}
 )
+
+register(
+    id='online',
+    entry_point='iris_robots.robot_env:RobotEnv',
+)
