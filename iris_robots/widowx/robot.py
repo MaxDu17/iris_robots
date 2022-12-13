@@ -61,11 +61,16 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
             initial_guesses = [custom_guess]
 
         for guess in initial_guesses:
+            print("p3")
+            # theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.01, 0.01)
             theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.001, 0.001)
+            print("p4", success)
+
             solution_found = True
 
             # Check to make sure a solution was found and that no joint limits were violated
             if success:
+                print("SUCCESS")
                 theta_list = [int(elem * 1000) / 1000.0 for elem in theta_list]
                 for x in range(self.group_info.num_joints):
                     if not (self.group_info.joint_lower_limits[x] <= theta_list[x] <=
@@ -77,10 +82,15 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
 
             if solution_found:
                 if execute:
+                    print("p5")
                     self.publish_positions_fast(theta_list)
+                    print("p6")
+
                     self.T_sb = T_sd
                 return theta_list, True
             else:
+                print("ERR")
+
                 rospy.loginfo("Guess failed to converge...")
 
         rospy.loginfo("No valid pose could be found")
@@ -94,6 +104,8 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
 
 class WidowXRobot:
     def __init__(self, control_hz=20, robot_model='wx250s', blocking=True):
+        # print("robot11")
+
         self.robot_model = robot_model
         self.dxl = InterbotixRobotXSCore(robot_model, None, True)
         self.arm = ModifiedInterbotixArmXSInterface(self.dxl, robot_model, 'arm', 2.0, 0.3)
@@ -121,6 +133,8 @@ class WidowXRobot:
         #self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
 
     def _joint_callback(self, msg):
+        # print("robot10")
+
         with self._joint_lock:
             for name, position, velocity in zip(msg.name, msg.position, msg.velocity):
                 self._angles[name] = position
@@ -134,29 +148,54 @@ class WidowXRobot:
     #     self._robot_process.terminate()
 
     def update_pose(self, pos, angle, duration=1.5):
+        # print("robot9")
+
         '''Expect [x,y,z], [yaw, pitch, roll]'''
 
         new_pose = np.eye(4)
         new_pose[:3, -1] = pos
         new_quat = Quaternion(euler_to_quat(angle))
         new_pose[:3, :3] = new_quat.rotation_matrix
-
+        print("BEFORE")
         if not self.blocking:
             solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
                                                                      execute=True)
         else:
             solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
-                                                                moving_time=duration, accel_time=duration * 0.45)
-
+                                                            moving_time=duration, accel_time=duration * 0.45)
+        print("AFTER")
         return pos, angle
 
+    def update_pose_3DOF_zangle(self, pos, zangle, duration=1.5):
+        # print("robot9")
+
+        '''Expect [x,y,z], [yaw, pitch, roll]'''
+
+        new_pose = np.eye(4)
+        new_pose[:3, -1] = pos
+        new_quat = Quaternion(axis=[0, 0, 1], angle=z_angle) * Quaternion(matrix=self.default_rot)
+        new_pose[:3, :3] = new_quat.rotation_matrix
+        print("BEFORE")
+        if not self.blocking:
+            solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
+                                                                     execute=True)
+        else:
+            solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
+                                                            moving_time=duration, accel_time=duration * 0.45)
+        print("AFTER")
+        return pos, angle
+
+
     def update_joints(self, joints, duration=1.5):
+        # print("robot8")
+        # expecting 5 joints
         if not self.blocking:
             self.arm.publish_positions_fast(joints)
         else:
             self.arm.publish_positions(joints, moving_time=duration, accel_time=duration * 0.45)
 
     def update_gripper(self, close_percentage):
+        # print("")
         desired_gripper = np.clip(1 - close_percentage, 0.05, 1)
         self._gripper.set_continuous_position(desired_gripper)
         if self.blocking:
@@ -171,6 +210,8 @@ class WidowXRobot:
             '''
 
     def get_joint_positions(self):
+        # print("robot6")
+
         with self._joint_lock:
             try:
                 return np.array([self._angles[k] for k in self.joint_names])
@@ -178,6 +219,8 @@ class WidowXRobot:
                 return None
 
     def get_joint_velocities(self):
+        # print("robot5")
+
         with self._joint_lock:
             try:
                 return np.array([self._velocities[k] for k in self.joint_names])
@@ -185,6 +228,8 @@ class WidowXRobot:
                 return None
 
     def get_gripper_state(self):
+        # print("robot4")
+
         state_1 = self._gripper.get_continuous_position()
         time_1 = time.time()
 
@@ -196,6 +241,8 @@ class WidowXRobot:
         return np.array([state_2, vel])
 
     def get_ee_pose(self):
+        # print("robot3")
+
         joint_positions = list(self.dxl.joint_states.position[self.arm.waist_index:(self._qn + self.arm.waist_index)])
         pose = mr.FKinSpace(self.arm.robot_des.M, self.arm.robot_des.Slist, joint_positions)
 
@@ -203,10 +250,13 @@ class WidowXRobot:
 
     def get_ee_pos(self):
         '''Returns [x,y,z]'''
+        # print("robot2")
+
         return self.get_ee_pose()[0]
 
     def get_ee_angle(self):
         '''Returns [yaw, pitch, roll]'''
+        # print("robot1")
         return quat_to_euler(self.get_ee_pose()[1])
 
 class WidowX200Robot(WidowXRobot):
@@ -219,4 +269,6 @@ class WidowX250SRobot(WidowXRobot):
 
 if __name__ == '__main__':
     robot = WidowX200Robot()
+
     import pdb; pdb.set_trace()
+

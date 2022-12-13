@@ -211,3 +211,32 @@ class RobotEnv(gym.Env):
     @property
     def num_cameras(self):
         return len(self.get_images())
+
+if __name__ == "__main__":
+    robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=20, use_local_cameras=False,
+                 use_robot_cameras=False,
+                 camera_types=['cv2'], blocking=True, reset_pos=None, control_mode="POSORIENT")
+    for i in range(10):
+        print(i)
+        # env.step([0.01, 0,0,0,0,0,0])
+        # env.step([0, 0,0.01,0,0,0,0])
+        robot.step(np.array([0.1, 0, 0, 0, 0, 0, 0]))
+        # print(env.get_observation[""])
+        # input("here")
+    for i in range(10):
+        print(i)
+        # env.step([0.01, 0,0,0,0,0,0])
+        # env.step([0, 0,0.01,0,0,0,0])
+        robot.step(np.array([0, 0, 0.1, 0, 0, 0, 0]))
+        # print(env.get_observation[""])
+        # input("here")
+    input("ready to spin!")
+    for i in range(10):
+        print(i)
+        # env.step([0.01, 0,0,0,0,0,0])
+        # env.step([0, 0,0.01,0,0,0,0])
+        robot.step(np.array([0, 0.5, 0, 0, 0, 0, 0]))
+        # print(env.get_observation[""])
+        # input("here")
+    # import ipdb
+    # ipdb.set_trace()

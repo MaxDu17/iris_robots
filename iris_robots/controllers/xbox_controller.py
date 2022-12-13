@@ -14,6 +14,8 @@ class XboxController:
 
     def __init__(self, env):
         # Initialize Controller
+        import ipdb
+        ipdb.set_trace()
         self.joystick = pygame.joystick.Joystick(0)
         self.joystick.init()
 

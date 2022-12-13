@@ -5,6 +5,22 @@ import io
 
 app = Flask(__name__)
 
+# def start_server():
+#     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
+
+### SERVER LAUNCHER ###
+def start_server(robot, camera=None):
+    global robot_controller
+    global camera_reader
+    robot_controller = robot
+    camera_reader = camera
+    #app.run(host='0.0.0.0', debug = True)
+    # app.run(host='0.0.0.0', port = 5000, debug = True)
+    app.run(host='0.0.0.0', port = 5000)
+    #app.run(host="172.0.0.0")
+
+
+
 ### KILL SEREVER ###
 @app.route('/kill_server', methods=['POST'])
 def kill_robot_request():
@@ -14,6 +30,7 @@ def kill_robot_request():
 ### ROBOT POSE UPDATES ###
 @app.route('/update_pose', methods=['POST'])
 def update_pose_request():
+    # print("POSE")
     pose = np.array(request.json['pose'])
     pos, angle = pose[:3], pose[3:]
     feasible_pos, feasbile_angle = robot_controller.update_pose(pos, angle)
@@ -22,12 +39,14 @@ def update_pose_request():
 
 @app.route('/update_joints', methods=['POST'])
 def update_joints_request():
+    # print("JOINTS")
     joints = np.array(request.json['joints'])
     robot_controller.update_joints(joints)
     return 'Pose Updated'
 
 @app.route('/update_gripper', methods=['POST'])
 def update_gripper_request():
+    # print("GRIPPER")
     close_percentage = np.array(request.json['gripper'])
     robot_controller.update_gripper(close_percentage)
     return 'Pose Updated'
@@ -35,6 +54,7 @@ def update_gripper_request():
 ### ROBOT STATE REQUESTS ###
 @app.route('/get_pos', methods=['POST'])
 def get_ee_pos_request():
+    # print("EEPOSE")
     robot_pos = robot_controller.get_ee_pos()
     return jsonify({"ee_pos": np.array(robot_pos).tolist()})
 
@@ -55,12 +75,14 @@ def get_qvel_request():
 
 @app.route('/get_gripper_state', methods=['POST'])
 def get_gripper_state_request():
+    # print("GRIPPERSTATE")
     robot_gripper_state = robot_controller.get_gripper_state()
     return jsonify({"gripper_state": np.array(robot_gripper_state).tolist()})
 
 # ### IMAGE REQUESTS ###
 @app.route('/read_cameras', methods=['POST'])
 def read_cameras():
+    # print("THIS IS ILLEGAL")
     camera_feed = camera_reader.read_cameras()
     buffer = io.BytesIO()
 
@@ -69,29 +91,25 @@ def read_cameras():
 
     return send_file(buffer, 'camera_feed.npz')
 
-### SERVER LAUNCHER ###
-def start_server(robot, camera=None):
-    global robot_controller
-    global camera_reader
-    robot_controller = robot
-    camera_reader = camera
-    app.run(host='0.0.0.0')
-
 if __name__ == "__main__":
-    robot_model = "dummy"
+    robot_model = "wx200"
+    # robot_model = "dummy"
+    hz = 5
+    blocking = False
+
     if robot_model == 'franka':
         from iris_robots.franka.robot import FrankaRobot
-        robot = FrankaRobot(control_hz=self.hz)
+        robot = FrankaRobot(control_hz=hz)
     elif robot_model == 'wx200':
         from iris_robots.widowx.robot import WidowX200Robot
-        robot = WidowX200Robot(control_hz=self.hz)
+        robot = WidowX200Robot(control_hz=hz, blocking=blocking)
     elif robot_model == 'wx250s':
         from iris_robots.widowx.robot import WidowX250SRobot
-        robot = WidowX250SRobot(control_hz=self.hz, blocking=blocking)
+        robot = WidowX250SRobot(control_hz=hz, blocking=blocking)
     elif robot_model == 'dummy':
         from iris_robots.dummy_robot import DummyRobot
         robot = DummyRobot()
     else:
         raise Exception("invalid config!")
-
     start_server(robot)
+    print("DONE INITIALIZING")
