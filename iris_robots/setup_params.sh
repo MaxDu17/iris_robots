@@ -1,0 +1,1 @@
+/home/iris/setup_params.sh

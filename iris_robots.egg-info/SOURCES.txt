@@ -30,6 +30,7 @@ iris_robots/real_robot_ik/wx250/widowx.py
 iris_robots/server/__init__.py
 iris_robots/server/robot_interface.py
 iris_robots/server/robot_server.py
+iris_robots/server/server_wrapper.py
 iris_robots/user_interface/__init__.py
 iris_robots/user_interface/gui.py
 iris_robots/user_interface/text.py

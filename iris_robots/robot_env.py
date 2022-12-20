@@ -13,10 +13,12 @@ from params import ROBOT_PARAMS
 from iris_robots.transformations import add_angles, angle_diff
 from iris_robots.camera_utils.multi_camera_wrapper import MultiCameraWrapper
 from iris_robots.server.robot_interface import RobotInterface
+from iris_robots.controllers.xbox_controller import XboxController
 
 class RobotEnv(gym.Env):
     def __init__(self, ip_address=None, robot_model='dummy', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
-            camera_types=['cv2'], blocking=True, reset_pos = None, control_mode = "POSORIENT"):
+            camera_types=['cv2'], blocking=True, reset_pos = None, control_mode = "POSORIENT",
+            xlims = None, ylims = None, zlims = None):
         # Initialize Gym Environment
         super().__init__()
         #TODO: allow for custom reset location
@@ -28,6 +30,9 @@ class RobotEnv(gym.Env):
 
         self.hz = control_hz
         self.blocking=blocking
+        self.xlims = xlims 
+        self.ylims = ylims 
+        self.zlims = zlims
 
         if control_mode == "POSORIENT":
             self.DoF = 6
@@ -84,6 +89,17 @@ class RobotEnv(gym.Env):
         lin_vel, rot_vel = self._limit_velocity(pos_action, angle_action)
         desired_pos = self._curr_pos + lin_vel
         desired_angle = add_angles(rot_vel, self._curr_angle)
+        print(desired_pos, desired_angle)
+        # safeguard
+        if self.xlims is not None and (desired_pos[0] > self.xlims[1] or desired_pos[0] < self.xlims[0]):
+            print("xlim")
+            desired_pos[0] = self._curr_pos[0]
+        if self.ylims is not None and (desired_pos[1] > self.ylims[1] or desired_pos[1] < self.ylims[0]):
+            print("ylim")
+            desired_pos[1] = self._curr_pos[1]
+        if self.zlims is not None and (desired_pos[2] > self.zlims[1] or desired_pos[2] < self.zlims[0]):
+            print("zlim")
+            desired_pos[2] = self._curr_pos[2]
 
         self._update_robot(desired_pos, desired_angle, gripper)
 
@@ -159,7 +175,19 @@ class RobotEnv(gym.Env):
         return lin_vel, rot_vel
 
     def _update_robot(self, pos, angle, gripper):
+        
+        # feasible_pos, feasible_angle = self._robot.update_pose_3DOF_zangle(pos, angle[0])
+        # LEGAL
+        # [[0 0  1.]
+        # [ 0 1 0]
+        # [-1  0  0]]
+
         feasible_pos, feasible_angle = self._robot.update_pose(pos, angle)
+        # Illegal
+        # [[-5.21278218e-02 -6.14422767e-03  9.98621519e-01]
+        # [-6.39736750e-04  9.99981073e-01  6.11919849e-03]
+        # [-9.98640216e-01 -3.19874396e-04 -5.21307659e-02]]
+
         self._robot.update_gripper(gripper)
         self._desired_pose = {'position': feasible_pos,
                               'angle': feasible_angle,
@@ -229,29 +257,44 @@ class RobotEnv(gym.Env):
         return len(self.get_images())
 
 if __name__ == "__main__":
-    robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=20, use_local_cameras=False,
+    robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=5, use_local_cameras=False,
                  use_robot_cameras=False,
-                 camera_types=['cv2'], blocking=True, reset_pos=None, control_mode="POSORIENT")
-    for i in range(10):
-        print(i)
+                 camera_types=['cv2'], blocking=False, reset_pos=None, control_mode="POSORIENT",
+                 xlims = [0.12, 0.33], ylims = [-0.23, 0.23], zlims = [0.032, 0.3])
+    
+    controller = XboxController(robot)
+    robot.reset()
+    for i in range(200):
+        # time.sleep(0.5)
+        action = controller.get_action()
+        if controller.get_logistics():
+            quit()
+        # print(action)
+        print(robot.get_observation()["current_pose"][2])
+        robot.step(action)
+        # print(controller.get_action())
+    # for i in range(10):
+    #     print(i)
+    #     # env.step([0.01, 0,0,0,0,0,0])
+    #     # env.step([0, 0,0.01,0,0,0,0])
+    #     robot.step(np.array([0.1, 0, 0, 0, 0, 0, 0]))
+    #     # print(env.get_observation[""])
+    #     # input("here")
+
+    # for i in range(10):
+    #     print(i)
+    #     # env.step([0.01, 0,0,0,0,0,0])
+    #     # env.step([0, 0,0.01,0,0,0,0])
+    #     robot.step(np.array([0, 0, 0.1, 0, 0, 0, 0]))
+    #     # print(env.get_observation[""])
+    #     # input("here")
+    # quit()
+    # input("ready to spin!")
+    # for i in range(10):
+        # print(i)
         # env.step([0.01, 0,0,0,0,0,0])
         # env.step([0, 0,0.01,0,0,0,0])
-        robot.step(np.array([0.1, 0, 0, 0, 0, 0, 0]))
-        # print(env.get_observation[""])
-        # input("here")
-    for i in range(10):
-        print(i)
-        # env.step([0.01, 0,0,0,0,0,0])
-        # env.step([0, 0,0.01,0,0,0,0])
-        robot.step(np.array([0, 0, 0.1, 0, 0, 0, 0]))
-        # print(env.get_observation[""])
-        # input("here")
-    input("ready to spin!")
-    for i in range(10):
-        print(i)
-        # env.step([0.01, 0,0,0,0,0,0])
-        # env.step([0, 0,0.01,0,0,0,0])
-        robot.step(np.array([0, 0.5, 0, 0, 0, 0, 0]))
+        # robot.step(np.array([0, 0.1, 0, 0, 0, 0, 0]))
         # print(env.get_observation[""])
         # input("here")
     # import ipdb

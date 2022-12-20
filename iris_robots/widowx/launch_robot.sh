@@ -15,4 +15,7 @@ else
   exit 0
 fi
 
+#roslaunch interbotix_xsarm_control /home/iris/iris_robots/iris_robots/widowx/src/interbotix_ros_manipulators/interbotix_ros_xsarms/interbotix_xsarm_control/launch/xsarm_control.launch  robot_model:=$1
 roslaunch interbotix_xsarm_control xsarm_control.launch robot_model:=$1
+
+#/home/iris/iris_robots/iris_robots/widowx/src/interbotix_ros_manipulators/interbotix_ros_xsarms/interbotix_xsarm_control/launch

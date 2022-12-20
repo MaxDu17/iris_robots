@@ -61,10 +61,8 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
             initial_guesses = [custom_guess]
 
         for guess in initial_guesses:
-            print("p3")
             # theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.01, 0.01)
             theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.001, 0.001)
-            print("p4", success)
 
             solution_found = True
 
@@ -82,15 +80,12 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
 
             if solution_found:
                 if execute:
-                    print("p5")
                     self.publish_positions_fast(theta_list)
-                    print("p6")
 
                     self.T_sb = T_sd
                 return theta_list, True
             else:
                 print("ERR")
-
                 rospy.loginfo("Guess failed to converge...")
 
         rospy.loginfo("No valid pose could be found")
@@ -129,6 +124,7 @@ class WidowXRobot:
 
         self._gripper = GripperController(robot_model)
         self.blocking = blocking
+        self.last_working_config = None 
 
         #self._ik_solver = RobotIKSolver(None, control_hz=control_hz, arm_name='wx200')
 
@@ -154,26 +150,49 @@ class WidowXRobot:
 
         new_pose = np.eye(4)
         new_pose[:3, -1] = pos
+        # angle[0] = 0
         new_quat = Quaternion(euler_to_quat(angle))
-        new_pose[:3, :3] = new_quat.rotation_matrix
-        print("BEFORE")
+        # print(angle)
+        rot_matrix = new_quat.rotation_matrix
+
+        # HACKY
+        rot_matrix[np.logical_or(rot_matrix < 0.1, rot_matrix < -0.1)] = 0
+
+        new_pose[:3, :3] = rot_matrix #new_quat.rotation_matrix
+        # print(rot_matrix)
+        # print(new_quat.rotation_matrix)
+        # try rounding rotations to zero 
+
         if not self.blocking:
+
             solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
                                                                      execute=True)
+                                                                    
         else:
             solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
                                                             moving_time=duration, accel_time=duration * 0.45)
-        print("AFTER")
+        # if not success:
+        #     print('RECOVERY BEHAVIOR')
+        #     if not self.blocking:
+        #         solution, success = self.arm.set_ee_pose_matrix_fast(self.last_working_config, custom_guess=self.get_joint_positions(),
+        #                                                                 execute=True)
+                                                                        
+        #     else:
+        #         solution, success = self.arm.set_ee_pose_matrix(self.last_working_config, custom_guess=self.get_joint_positions(),
+        #                                                         moving_time=duration, accel_time=duration * 0.45)
+        # else:
+        #     self.last_working_config = new_pose
         return pos, angle
 
-    def update_pose_3DOF_zangle(self, pos, zangle, duration=1.5):
-        # print("robot9")
-
+    def update_pose_3DOF_zangle(self, pos, z_angle, duration=1.5):
         '''Expect [x,y,z], [yaw, pitch, roll]'''
-
+        # print(self.get_ee_pose())
         new_pose = np.eye(4)
         new_pose[:3, -1] = pos
         new_quat = Quaternion(axis=[0, 0, 1], angle=z_angle) * Quaternion(matrix=self.default_rot)
+        print(new_quat.rotation_matrix)
+        # new_quat = Quaternion(axis=[0, 1, 0], angle=z_angle) * Quaternion(matrix=self.default_rot)
+
         new_pose[:3, :3] = new_quat.rotation_matrix
         print("BEFORE")
         if not self.blocking:
@@ -183,7 +202,7 @@ class WidowXRobot:
             solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
                                                             moving_time=duration, accel_time=duration * 0.45)
         print("AFTER")
-        return pos, angle
+        return pos, np.array([0, 0, z_angle])
 
 
     def update_joints(self, joints, duration=1.5):
