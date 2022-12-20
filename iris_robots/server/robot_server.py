@@ -64,18 +64,18 @@ def get_ee_pos_request():
     return jsonify({"ee_pos": np.array(robot_pos).tolist()})
 
 ### XBOX CONTROLLER REQUESTS ###
-@app.route('/get_pos', methods=['POST'])
+@app.route('/get_joy_action', methods=['POST'])
 def get_action_request():
     # print("EEPOSE")
     action = xbox_controller.get_action()
-    return jsonify({"ee_pos": np.array(action).tolist()})
+    return jsonify({"joy_action": np.array(action).tolist()})
 
 ### ROBOT STATE REQUESTS ###
-@app.route('/get_pos', methods=['POST'])
+@app.route('/get_logistics', methods=['POST'])
 def get_feedback_request():
     # print("EEPOSE")
     logistics = xbox_controller.get_logistics()
-    return jsonify({"ee_pos": np.array(logistics).tolist()})
+    return jsonify({"joy_logistics": np.array(logistics).tolist()})
 
 @app.route('/get_angle', methods=['POST'])
 def get_ee_angle_request():

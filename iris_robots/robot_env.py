@@ -108,6 +108,11 @@ class RobotEnv(gym.Env):
         time.sleep(sleep_left)
         return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
 
+    def get_joy_info(self):
+        action = self._robot.get_joy_pos()
+        logistics = self._robot.get_joy_logistics()
+        return action, logistics
+    
     def get_reward(self):
         return 0
 
