@@ -34,10 +34,12 @@ class XboxController:
     def get_logistics(self): 
         # for quitting, rejecting, etc
         reset = self.joystick.get_button(3)
-        return reset 
+        # reject = self.joystick.get_button(2)
+        return np.array([reset]) 
 
     def get_action(self):
         pygame.event.get()
+        # scaler = 0.05
         scaler = 0.05
 
         # XYZ Dimensions

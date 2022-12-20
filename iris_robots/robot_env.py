@@ -257,45 +257,18 @@ class RobotEnv(gym.Env):
         return len(self.get_images())
 
 if __name__ == "__main__":
-    robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=5, use_local_cameras=False,
+    robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=20, use_local_cameras=False,
                  use_robot_cameras=False,
                  camera_types=['cv2'], blocking=False, reset_pos=None, control_mode="POSORIENT",
                  xlims = [0.12, 0.33], ylims = [-0.23, 0.23], zlims = [0.032, 0.3])
     
     controller = XboxController(robot)
     robot.reset()
-    for i in range(200):
+    for i in range(2000):
         # time.sleep(0.5)
         action = controller.get_action()
         if controller.get_logistics():
             quit()
         # print(action)
-        print(robot.get_observation()["current_pose"][2])
+        # print(robot.get_observation()["current_pose"][2])
         robot.step(action)
-        # print(controller.get_action())
-    # for i in range(10):
-    #     print(i)
-    #     # env.step([0.01, 0,0,0,0,0,0])
-    #     # env.step([0, 0,0.01,0,0,0,0])
-    #     robot.step(np.array([0.1, 0, 0, 0, 0, 0, 0]))
-    #     # print(env.get_observation[""])
-    #     # input("here")
-
-    # for i in range(10):
-    #     print(i)
-    #     # env.step([0.01, 0,0,0,0,0,0])
-    #     # env.step([0, 0,0.01,0,0,0,0])
-    #     robot.step(np.array([0, 0, 0.1, 0, 0, 0, 0]))
-    #     # print(env.get_observation[""])
-    #     # input("here")
-    # quit()
-    # input("ready to spin!")
-    # for i in range(10):
-        # print(i)
-        # env.step([0.01, 0,0,0,0,0,0])
-        # env.step([0, 0,0.01,0,0,0,0])
-        # robot.step(np.array([0, 0.1, 0, 0, 0, 0, 0]))
-        # print(env.get_observation[""])
-        # input("here")
-    # import ipdb
-    # ipdb.set_trace()

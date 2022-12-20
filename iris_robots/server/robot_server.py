@@ -2,6 +2,8 @@ from flask import Flask, jsonify, request, send_file, make_response
 from PIL import Image
 import numpy as np
 import io
+from iris_robots.controllers.xbox_controller import XboxController
+
 
 app = Flask(__name__)
 
@@ -12,6 +14,9 @@ app = Flask(__name__)
 def start_server(robot, camera=None):
     global robot_controller
     global camera_reader
+    global xbox_controller 
+    xbox_controller = XboxController(robot)
+
     robot_controller = robot
     camera_reader = camera
     #app.run(host='0.0.0.0', debug = True)
@@ -58,6 +63,20 @@ def get_ee_pos_request():
     robot_pos = robot_controller.get_ee_pos()
     return jsonify({"ee_pos": np.array(robot_pos).tolist()})
 
+### XBOX CONTROLLER REQUESTS ###
+@app.route('/get_pos', methods=['POST'])
+def get_action_request():
+    # print("EEPOSE")
+    action = xbox_controller.get_action()
+    return jsonify({"ee_pos": np.array(action).tolist()})
+
+### ROBOT STATE REQUESTS ###
+@app.route('/get_pos', methods=['POST'])
+def get_feedback_request():
+    # print("EEPOSE")
+    logistics = xbox_controller.get_logistics()
+    return jsonify({"ee_pos": np.array(logistics).tolist()})
+
 @app.route('/get_angle', methods=['POST'])
 def get_ee_angle_request():
     robot_angle = robot_controller.get_ee_angle()
@@ -82,7 +101,6 @@ def get_gripper_state_request():
 # ### IMAGE REQUESTS ###
 @app.route('/read_cameras', methods=['POST'])
 def read_cameras():
-    # print("THIS IS ILLEGAL")
     camera_feed = camera_reader.read_cameras()
     buffer = io.BytesIO()
 
