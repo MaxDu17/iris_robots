@@ -30,6 +30,14 @@ class RobotInterface:
         info_dict = {"gripper": np.array([close_percentage]).tolist()}
         requests.post(self.url_func('update_gripper'), json=info_dict)
 
+    def get_joy_pos(self):
+        info_dict = requests.post(self.url_func('get_joy_action'))
+        return np.array(info_dict.json()['joy_action'])
+
+    def get_joy_logistics(self):
+        info_dict = requests.post(self.url_func('get_logistics'))
+        return np.array(info_dict.json()['joy_logistics'])
+
     def get_ee_pos(self):
         info_dict = requests.post(self.url_func('get_pos'))
         return np.array(info_dict.json()['ee_pos'])
