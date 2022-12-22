@@ -27,7 +27,7 @@ class CV2Camera:
         # Extract left and right images from side-by-side
         read_time = time.time()
         img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = cv2.resize(img, dsize=(img_size, img_size), interpolation=cv2.INTER_AREA)
+        img = cv2.resize(img, dsize=(self.img_size, self.img_size), interpolation=cv2.INTER_AREA)
 
         dict = {'array': img, 'shape': img.shape, 'type': 'rgb',
                   'read_time': read_time, 'serial_number': self._serial_number + '/rgb_image'}

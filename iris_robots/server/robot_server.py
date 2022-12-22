@@ -3,6 +3,7 @@ from PIL import Image
 import numpy as np
 import io
 from iris_robots.controllers.xbox_controller import XboxController
+from iris_robots.camera_utils.multi_camera_wrapper import MultiCameraWrapper
 
 
 app = Flask(__name__)
@@ -68,7 +69,40 @@ def get_ee_pos_request():
 def get_action_request():
     # print("EEPOSE")
     action = xbox_controller.get_action()
+    print(action)
     return jsonify({"joy_action": np.array(action).tolist()})
+
+
+@app.route('/get_set_all', methods=['POST'])
+def get_set_all():
+    pose = np.array(request.json['pose'])
+    pos, angle = pose[:3], pose[3:]
+    feasible_pos, feasbile_angle = robot_controller.update_pose(pos, angle)
+    close_percentage = np.array(request.json['gripper'])
+    robot_controller.update_gripper(close_percentage)
+
+    # print("EEPOSE")
+    action = xbox_controller.get_action()
+    logistics = xbox_controller.get_logistics()
+    robot_pos = robot_controller.get_ee_pos()
+    robot_angle = robot_controller.get_ee_angle()
+    robot_gripper_state = robot_controller.get_gripper_state()
+    joint_angle = robot_controller.get_ee_angle()
+    joint_vel = robot_controller.get_joint_velocities()
+
+    camera_feed = camera_reader.read_cameras()
+    this_camera = camera_feed[0]["array"] #TEMP SOLUTION
+
+    return jsonify({"joy_action": np.array(action).tolist(),
+    "joy_logistics" : np.array(logistics).tolist(),
+    "ee_pos" : np.array(robot_pos).tolist(),
+    "ee_angle" : np.array(robot_angle).tolist(), 
+    "gripper_state" : np.array(robot_gripper_state).tolist(),
+    "joint_pos" : np.array(joint_angle).tolist(), 
+    "joint_vel" : np.array(joint_vel).tolist(),
+    "feasible_pos": np.array(feasible_pos).tolist(),
+    "feasible_angle": np.array(feasbile_angle).tolist(),
+    "camera": np.array(this_camera, dtype = np.uint8).tolist()})
 
 ### ROBOT STATE REQUESTS ###
 @app.route('/get_logistics', methods=['POST'])
@@ -114,6 +148,9 @@ if __name__ == "__main__":
     # robot_model = "dummy"
     hz = 5
     blocking = False
+    
+    camera_reader = MultiCameraWrapper(camera_types=['cv2'])
+
 
     if robot_model == 'franka':
         from iris_robots.franka.robot import FrankaRobot
@@ -129,5 +166,5 @@ if __name__ == "__main__":
         robot = DummyRobot()
     else:
         raise Exception("invalid config!")
-    start_server(robot)
+    start_server(robot, camera = camera_reader)
     print("DONE INITIALIZING")

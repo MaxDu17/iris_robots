@@ -62,7 +62,7 @@ class ModifiedInterbotixArmXSInterface(InterbotixArmXSInterface):
 
         for guess in initial_guesses:
             # theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.01, 0.01)
-            theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.001, 0.001)
+            theta_list, success = mr.IKinSpace(self.robot_des.Slist, self.robot_des.M, T_sd, guess, 0.0001, 0.0001)
 
             solution_found = True
 
@@ -196,8 +196,10 @@ class WidowXRobot:
         new_pose[:3, :3] = new_quat.rotation_matrix
         print("BEFORE")
         if not self.blocking:
-            solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
-                                                                     execute=True)
+            # solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, custom_guess=self.get_joint_positions(),
+            #                                                          execute=True)
+            solution, success = self.arm.set_ee_pose_matrix_fast(new_pose, 
+                                                            execute=True)
         else:
             solution, success = self.arm.set_ee_pose_matrix(new_pose, custom_guess=self.get_joint_positions(),
                                                             moving_time=duration, accel_time=duration * 0.45)

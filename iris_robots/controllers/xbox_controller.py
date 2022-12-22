@@ -19,7 +19,7 @@ class XboxController:
 
         # Control Parameters
         self.threshold = 0.01
-        self.DoF = env.DoF
+        self.DoF = 6 #env.DoF
 
         # Save Gripper
         self.gripper_closed = False
@@ -40,7 +40,7 @@ class XboxController:
     def get_action(self):
         pygame.event.get()
         # scaler = 0.05
-        scaler = 0.05
+        scaler = 0.25
 
         # XYZ Dimensions
         x = - scaler * self.cut(self.joystick.get_axis(1))
