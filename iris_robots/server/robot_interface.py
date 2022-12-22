@@ -8,8 +8,9 @@ import requests
 import io
 
 class RobotInterface:
-    def __init__(self, control_hz=None, ip_address='127.0.0.1'):
-        self.url_func = lambda x: 'http://' + ip_address + ':5000/' + x
+    def __init__(self, control_hz=None, ip_address='127.0.0.1', port = 5000):
+        self.url_func = lambda x: 'http://' + ip_address + f":{port}/" + x
+        # self.url_func = lambda x: 'http://' + ip_address + ':5000/' + x
 
     def update_control_hz(self, hz):
         info_dict = {"control_hz": np.array([hz]).tolist()}
@@ -60,6 +61,18 @@ class RobotInterface:
 
     def kill_server(self):
         requests.post(self.url_func('kill_server'))
+
+    def all_send_receive(self, pos, angle, close_percentage):
+        info_dict = {"pose": np.concatenate([pos, angle]).tolist(),
+                     "gripper": np.array([close_percentage]).tolist()}
+        return_dict = requests.post(self.url_func('get_set_all'), json=info_dict)
+
+        return np.array(return_dict.json()["joy_action"]), np.array(return_dict.json()["joy_logistics"]), \
+               np.array(return_dict.json()["ee_pos"]), np.array(return_dict.json()["ee_angle"]), np.array(return_dict.json()["gripper_state"]), \
+               np.array(return_dict.json()["joint_pos"]), np.array(return_dict.json()["joint_vel"]), \
+               np.array(return_dict.json()["feasible_pos"]), np.array(return_dict.json()["feasible_angle"]), \
+               np.array(return_dict.json()["camera"], dtype = np.uint8)
+
 
     def read_cameras(self):
         camera_feed_bytes = requests.post(self.url_func('read_cameras')).content
