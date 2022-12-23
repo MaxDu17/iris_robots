@@ -33,9 +33,10 @@ class XboxController:
 
     def get_logistics(self): 
         # for quitting, rejecting, etc
-        reset = self.joystick.get_button(3)
+        term_succ = self.joystick.get_button(3)
+        term_fail = self.joystick.get_button(2)
         # reject = self.joystick.get_button(2)
-        return np.array([reset]) 
+        return np.array([term_succ, term_fail]) 
 
     def get_action(self):
         pygame.event.get()

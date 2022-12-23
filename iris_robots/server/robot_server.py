@@ -87,7 +87,7 @@ def get_set_all():
     robot_pos = robot_controller.get_ee_pos()
     robot_angle = robot_controller.get_ee_angle()
     robot_gripper_state = robot_controller.get_gripper_state()
-    joint_angle = robot_controller.get_ee_angle()
+    joint_angle = robot_controller.get_joint_positions()
     joint_vel = robot_controller.get_joint_velocities()
 
     camera_feed = camera_reader.read_cameras()
