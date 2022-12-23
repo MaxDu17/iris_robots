@@ -16,7 +16,7 @@ from iris_robots.server.robot_interface import RobotInterface
 from iris_robots.controllers.xbox_controller import XboxController
 
 class RobotEnv(gym.Env):
-    def __init__(self, ip_address=None, robot_model='dummy', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
+    def __init__(self, ip_address=None, port = 5000, robot_model='dummy', control_hz=20, use_local_cameras=False, use_robot_cameras=False,
             camera_types=['cv2'], blocking=True, reset_pos = None, control_mode = "POSORIENT",
             xlims = None, ylims = None, zlims = None):
         # Initialize Gym Environment
@@ -42,9 +42,9 @@ class RobotEnv(gym.Env):
             raise Exception("control mode not implemented!")
 
         self.action_space = spaces.Box(np.array([-1,-1,-1,-1,-1,-1,-1]),np.array([1,1,1,1,1,1,1]),dtype=np.float32)
-        self.observation_space = spaces.Box(-10, 10,dtype=np.float32) # TODO figure out what is going on with this
+        self.observation_space = spaces.Box(np.array([-10]), np.array([10]),dtype=np.float32) # TODO figure out what is going on with this
         #self.action_space = np.ones(shape = ((self.DoF + 1), 2))
-
+        self.online = False
         # Robot Configuration
         self.robot_model = robot_model
         if ip_address is None:
@@ -64,7 +64,8 @@ class RobotEnv(gym.Env):
                 raise NotImplementedError
 
         else:
-            self._robot = RobotInterface(ip_address=ip_address)
+            self.online = True #speedups!
+            self._robot = RobotInterface(ip_address=ip_address, port = port)
 
         # Reset joints
         self.reset_joints = ROBOT_PARAMS[robot_model]['reset_joints']
@@ -77,6 +78,8 @@ class RobotEnv(gym.Env):
             self._camera_reader = MultiCameraWrapper(camera_types=camera_types)
 
         self.reset()
+        self.curr_pos = self._robot.get_ee_pos().copy()
+        self.curr_angle = self._robot.get_ee_angle().copy()
 
     def step(self, action):
         start_time = time.time()
@@ -87,9 +90,13 @@ class RobotEnv(gym.Env):
 
         pos_action, angle_action, gripper = self._format_action(action)
         lin_vel, rot_vel = self._limit_velocity(pos_action, angle_action)
-        desired_pos = self._curr_pos + lin_vel
-        desired_angle = add_angles(rot_vel, self._curr_angle)
-        print(desired_pos, desired_angle)
+
+        desired_pos = self.curr_pos + lin_vel
+        desired_angle = add_angles(rot_vel, self.curr_angle)
+
+        # desired_pos = self._curr_pos + lin_vel
+        # desired_angle = add_angles(rot_vel, self._curr_angle)
+        # print(desired_pos, desired_angle)
         # safeguard
         if self.xlims is not None and (desired_pos[0] > self.xlims[1] or desired_pos[0] < self.xlims[0]):
             print("xlim")
@@ -101,12 +108,26 @@ class RobotEnv(gym.Env):
             print("zlim")
             desired_pos[2] = self._curr_pos[2]
 
-        self._update_robot(desired_pos, desired_angle, gripper)
+        if not self.online:
+            self._update_robot(desired_pos, desired_angle, gripper)
+            self.curr_pos = self._robot.get_ee_pos()
+            self.curr_angle = self._robot.get_ee_angle()
+            comp_time = time.time() - start_time
+            sleep_left = max(0, (1 / self.hz) - comp_time)
+            time.sleep(sleep_left)
+            return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
+        else:
+            state_dict, joy_action, joy_logistics, camera =  self._update_robot_fast(desired_pos, desired_angle, gripper)
+            obs = self.get_observation(include_images = False, state_dict = state_dict)
+            obs["images"] = camera
+            self.curr_pos = state_dict["current_pose"].copy()[0 : 3]
+            self.curr_angle = state_dict["current_pose"].copy()[3:6]
+            print(self.curr_pos)
 
-        comp_time = time.time() - start_time
-        sleep_left = max(0, (1 / self.hz) - comp_time)
-        time.sleep(sleep_left)
-        return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
+            comp_time = time.time() - start_time
+            sleep_left = max(0, (1 / self.hz) - comp_time)
+            time.sleep(sleep_left)
+            return obs, self.get_reward(), self.get_done(), self.get_info(), joy_action, joy_logistics
 
     def get_joy_info(self):
         action = self._robot.get_joy_pos()
@@ -133,7 +154,7 @@ class RobotEnv(gym.Env):
         # print(desired_pos)
         comp_time = time.time() - start_time
         sleep_left = max(0, (1 / self.hz) - comp_time)
-        time.sleep(sleep_left)
+        time.sleep(sleep_left) # DEBUGGING ONLY
         return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
 
     def update_robot(self, desired_pos, desired_angle, gripper):
@@ -198,6 +219,35 @@ class RobotEnv(gym.Env):
                               'angle': feasible_angle,
                               'gripper': gripper}
 
+    def _update_robot_fast(self, pos, angle, gripper):
+        # massive call that gets all the information and sends all the information at once
+        joy_action, joy_logistics, pos, angle, gripper_state, joint_pos, joint_vel, feasible_pos, feasible_angle, camera  = \
+            self._robot.all_send_receive(pos, angle, gripper)
+
+        self._desired_pose = {'position': feasible_pos,
+                              'angle': feasible_angle,
+                              'gripper': gripper}
+
+        state_dict = {}
+        state_dict['control_key'] = 'desired_pose' if \
+            self.use_desired_pose else 'current_pose'
+
+        state_dict['desired_pose'] = np.concatenate(
+            [self._desired_pose['position'],
+             self._desired_pose['angle'],
+             [self._desired_pose['gripper']]])
+
+        state_dict['current_pose'] = np.concatenate(
+            [pos,
+             angle,
+             [gripper_state[0]]])
+
+        state_dict['joint_positions'] = joint_pos
+        state_dict['joint_velocities'] = joint_vel
+        state_dict['gripper_velocity'] = gripper_state[1]
+        return state_dict, joy_action, joy_logistics, camera
+    
+
     @property
     def _curr_pos(self):
         if self.use_desired_pose: return self._desired_pose['position'].copy()
@@ -239,13 +289,16 @@ class RobotEnv(gym.Env):
 
         return state_dict
 
-    def get_observation(self, include_images=True, include_robot_state=True):
+    def get_observation(self, include_images=True, include_robot_state=True, state_dict = None):
         obs_dict = {}
         if include_images:
             obs_dict['images'] = self.get_images()
         if include_robot_state:
-            state_dict = self.get_state()
-            obs_dict.update(state_dict)
+            if state_dict == None:
+                s_dict = self.get_state()
+            else:
+                s_dict = state_dict
+            obs_dict.update(s_dict)
         return obs_dict
 
     def render(self, height, width, mode):
@@ -262,18 +315,36 @@ class RobotEnv(gym.Env):
         return len(self.get_images())
 
 if __name__ == "__main__":
-    robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=20, use_local_cameras=False,
-                 use_robot_cameras=False,
+    # robot = RobotEnv( ip_address=None, robot_model='wx200', control_hz=20, use_local_cameras=False,
+    #              use_robot_cameras=False,
+    #              camera_types=['cv2'], blocking=False, reset_pos=None, control_mode="POSORIENT",
+    #              xlims = [0.12, 0.33], ylims = [-0.23, 0.23], zlims = [0.032, 0.3])
+    robot = RobotEnv( ip_address='127.0.0.1', port = 9136, robot_model='wx200', control_hz=3, use_local_cameras=False,
+                 use_robot_cameras=True,
                  camera_types=['cv2'], blocking=False, reset_pos=None, control_mode="POSORIENT",
-                 xlims = [0.12, 0.33], ylims = [-0.23, 0.23], zlims = [0.032, 0.3])
-    
-    controller = XboxController(robot)
+                 xlims = [0.12, 0.4], ylims = [-0.23, 0.23], zlims = [0.032, 0.3])
+
+    # controller = XboxController(robot)
     robot.reset()
-    for i in range(2000):
-        # time.sleep(0.5)
-        action = controller.get_action()
-        if controller.get_logistics():
-            quit()
+    action = np.array([0, 0, 0, 0, 0, 0, 0])
+    import imageio
+
+    writer = imageio.get_writer("debugging/test.gif", fps = 20)
+
+    for i in range(200):
+        print(i)
+        # action, logistics = robot.get_joy_info()
+        # print(time.time() - beg)
+        # print(action)
+        # if controller.get_logistics():
+        #     quit()
         # print(action)
         # print(robot.get_observation()["current_pose"][2])
-        robot.step(action)
+        beg = time.time()
+        obs, _, _, _, joy_action, joy_logistics = robot.step(action)
+        print(time.time() - beg)
+        action = joy_action
+        # writer.append_data(obs["images"][0]["array"])  # grayscale rendering
+        writer.append_data(obs["images"])  # grayscale rendering
+        # print(time.time() - beg)
+    writer.close()
