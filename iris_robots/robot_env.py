@@ -33,16 +33,27 @@ class RobotEnv(gym.Env):
         self.xlims = xlims 
         self.ylims = ylims 
         self.zlims = zlims
+        self.joy_logistics = None
+
+        self.momentum = 0.15
+        self.last_vel = None
 
         if control_mode == "POSORIENT":
             self.DoF = 6
+            self.action_space = spaces.Box(np.array([-1, -1, -1, -1, -1, -1, -1]), np.array([1, 1, 1, 1, 1, 1, 1]),
+                                           dtype=np.float32)
+            self.observation_space = spaces.Box(np.array([-10]), np.array([10]),
+                                                dtype=np.float32)  # TODO figure out what is going on with this
         elif control_mode == "POS":
             self.DoF = 3
+            self.action_space = spaces.Box(np.array([-1, -1, -1, -1]), np.array([1, 1, 1, 1]),
+                                           dtype=np.float32)
+            self.observation_space = spaces.Box(np.array([-10]), np.array([10]),
+                                                dtype=np.float32)  # TODO figure out what is going on with this
         else:
             raise Exception("control mode not implemented!")
 
-        self.action_space = spaces.Box(np.array([-1,-1,-1,-1,-1,-1,-1]),np.array([1,1,1,1,1,1,1]),dtype=np.float32)
-        self.observation_space = spaces.Box(np.array([-10]), np.array([10]),dtype=np.float32) # TODO figure out what is going on with this
+
         #self.action_space = np.ones(shape = ((self.DoF + 1), 2))
         self.online = False
         # Robot Configuration
@@ -83,7 +94,6 @@ class RobotEnv(gym.Env):
 
     def step(self, action):
         start_time = time.time()
-
         # Process Action
         assert len(action) == (self.DoF + 1)
         assert (action.max() <= 1) and (action.min() >= -1)
@@ -118,16 +128,33 @@ class RobotEnv(gym.Env):
             return self.get_observation(), self.get_reward(), self.get_done(), self.get_info()
         else:
             state_dict, joy_action, joy_logistics, camera =  self._update_robot_fast(desired_pos, desired_angle, gripper)
+            self.joy_logistics = joy_logistics
             obs = self.get_observation(include_images = False, state_dict = state_dict)
-            obs["images"] = camera
+            obs["agentview_image"] = camera.transpose(2, 0, 1).astype(np.float64)
             self.curr_pos = state_dict["current_pose"].copy()[0 : 3]
             self.curr_angle = state_dict["current_pose"].copy()[3:6]
-            print(self.curr_pos)
+            # print(self.curr_pos)
 
             comp_time = time.time() - start_time
             sleep_left = max(0, (1 / self.hz) - comp_time)
             time.sleep(sleep_left)
-            return obs, self.get_reward(), self.get_done(), self.get_info(), joy_action, joy_logistics
+            info = self.get_info()
+
+            if self.DoF == 3: #cutting out any rotation
+                joy_action = np.concatenate((joy_action[0:3], joy_action[-1:]), axis = 0)
+
+            if self.last_vel is not None:
+                # print("MOMEMTUM")
+                momentum_action = (1 - self.momentum) * np.copy(joy_action) + self.momentum * self.last_vel
+                info["joy_action"] = momentum_action
+                info["joy_action"][-1] = joy_action[-1] #ignore the gripper
+            else:
+                info["joy_action"] = joy_action
+
+            self.last_vel = np.copy(joy_action)
+            info["joy_action"][2] += 0.03
+            info["joy_action"][0] += 0.03
+            return obs, self.get_reward(), self.get_done(), info
 
     def get_joy_info(self):
         action = self._robot.get_joy_pos()
@@ -138,10 +165,11 @@ class RobotEnv(gym.Env):
         return 0
 
     def get_done(self):
-        return 0
+        return np.sum(self.joy_logistics) > 0 #if any of the terminating buttons are pressed
 
     def get_info(self):
-        return {}
+        return {"term_success" : self.joy_logistics[0],
+                "term_failure" : self.joy_logistics[1]}
 
 
     def step_direct(self, action):
@@ -165,11 +193,11 @@ class RobotEnv(gym.Env):
 
     def reset(self):
         print("resetting!")
-        self._robot.update_gripper(0)
+        self._robot.update_gripper(-1)
         self._robot.update_joints(self.reset_joints)
         self._desired_pose = {'position': self._robot.get_ee_pos(),
                               'angle': self._robot.get_ee_angle(),
-                              'gripper': 0}
+                              'gripper': -1}
         self._default_angle = self._desired_pose['angle']
         time.sleep(2.5)
         return self.get_observation()
@@ -229,8 +257,8 @@ class RobotEnv(gym.Env):
                               'gripper': gripper}
 
         state_dict = {}
-        state_dict['control_key'] = 'desired_pose' if \
-            self.use_desired_pose else 'current_pose'
+        # state_dict['control_key'] = 'desired_pose' if \
+        #     self.use_desired_pose else 'current_pose'
 
         state_dict['desired_pose'] = np.concatenate(
             [self._desired_pose['position'],
@@ -270,8 +298,8 @@ class RobotEnv(gym.Env):
         state_dict = {}
         gripper_state = self._robot.get_gripper_state()
 
-        state_dict['control_key'] = 'desired_pose' if \
-            self.use_desired_pose else 'current_pose'
+        # state_dict['control_key'] = 'desired_pose' if \
+        #     self.use_desired_pose else 'current_pose'
 
         state_dict['desired_pose'] = np.concatenate(
             [self._desired_pose['position'],
@@ -292,7 +320,7 @@ class RobotEnv(gym.Env):
     def get_observation(self, include_images=True, include_robot_state=True, state_dict = None):
         obs_dict = {}
         if include_images:
-            obs_dict['images'] = self.get_images()
+            obs_dict['agentview_image'] = self.get_images()[0]["array"].transpose(2, 0, 1).astype(np.float64) #hacky, but it works for now!
         if include_robot_state:
             if state_dict == None:
                 s_dict = self.get_state()
@@ -341,9 +369,9 @@ if __name__ == "__main__":
         # print(action)
         # print(robot.get_observation()["current_pose"][2])
         beg = time.time()
-        obs, _, _, _, joy_action, joy_logistics = robot.step(action)
+        obs, reward, done, info = robot.step(action)
         print(time.time() - beg)
-        action = joy_action
+        action = info["joy_action"]
         # writer.append_data(obs["images"][0]["array"])  # grayscale rendering
         writer.append_data(obs["images"])  # grayscale rendering
         # print(time.time() - beg)
