@@ -26,15 +26,19 @@ class XboxController:
         self.button_resetted = True
 
     def cut(self, value):
-        EPSILON = 0.2
+        EPSILON = 0.1
         if abs(value) < EPSILON:
             return 0
         return value
 
     def get_logistics(self): 
         # for quitting, rejecting, etc
+        pygame.event.get()
         term_succ = self.joystick.get_button(3)
         term_fail = self.joystick.get_button(2)
+        if term_succ or term_fail:
+            self.gripper_closed = False
+            self.button_resetted = True
         # reject = self.joystick.get_button(2)
         return np.array([term_succ, term_fail]) 
 
@@ -44,8 +48,8 @@ class XboxController:
         scaler = 0.25
 
         # XYZ Dimensions
-        x = - scaler * self.cut(self.joystick.get_axis(1))
-        y = - scaler * self.cut(self.joystick.get_axis(0))
+        x =  scaler * self.cut(self.joystick.get_axis(0))
+        y = - scaler * self.cut(self.joystick.get_axis(1))
         # y = - scaler * self.cut((self.joystick.get_button(2) - self.joystick.get_button(1)))#scaler * self.joystick.get_axis(1)
         # y = - scaler * self.cut((self.joystick.get_button(2) - self.joystick.get_button(1)))#scaler * self.joystick.get_axis(1)
         # z = (self.joystick.get_axis(5) - self.joystick.get_axis(2)) / 2

@@ -7,6 +7,7 @@ def gather_cv2_cameras(max_ind=20, img_size = 84):
     all_cv2_cameras = []
     for i in range(max_ind):
         cap = cv2.VideoCapture(i)
+        cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
         if cap.read()[0]:
             camera = CV2Camera(cap, img_size)
             all_cv2_cameras.append(camera)
