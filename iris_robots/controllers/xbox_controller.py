@@ -26,7 +26,7 @@ class XboxController:
         self.button_resetted = True
 
     def cut(self, value):
-        EPSILON = 0.1
+        EPSILON = 0.07
         if abs(value) < EPSILON:
             return 0
         return value

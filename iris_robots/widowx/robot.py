@@ -217,7 +217,7 @@ class WidowXRobot:
 
     def update_gripper(self, close_percentage):
         # print("")
-        desired_gripper = np.clip(1 - close_percentage, 0.05, 1)
+        desired_gripper = np.clip(1 - close_percentage, 0.05, 0.95)
         self._gripper.set_continuous_position(desired_gripper)
         if self.blocking:
             time.sleep(0.5)
