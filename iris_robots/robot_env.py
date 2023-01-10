@@ -35,7 +35,7 @@ class RobotEnv(gym.Env):
         self.zlims = zlims
         self.joy_logistics = None
 
-        self.momentum = 0.15
+        self.momentum = 0.05
         self.last_vel = None
 
         if control_mode == "POSORIENT":
@@ -96,7 +96,8 @@ class RobotEnv(gym.Env):
         start_time = time.time()
         # Process Action
         assert len(action) == (self.DoF + 1)
-        assert (action.max() <= 1) and (action.min() >= -1)
+        action = np.clip(action, -1, 1)
+        # assert (action.max() <= 1) and (action.min() >= -1)
 
         pos_action, angle_action, gripper = self._format_action(action)
         lin_vel, rot_vel = self._limit_velocity(pos_action, angle_action)
@@ -130,7 +131,7 @@ class RobotEnv(gym.Env):
             state_dict, joy_action, joy_logistics, camera =  self._update_robot_fast(desired_pos, desired_angle, gripper)
             self.joy_logistics = joy_logistics
             obs = self.get_observation(include_images = False, state_dict = state_dict)
-            obs["agentview_image"] = camera.transpose(2, 0, 1).astype(np.float64)
+            obs["agentview_image"] = camera.transpose(2, 0, 1).astype(np.float32) / 255.
             self.curr_pos = state_dict["current_pose"].copy()[0 : 3]
             self.curr_angle = state_dict["current_pose"].copy()[3:6]
             # print(self.curr_pos)
@@ -272,7 +273,7 @@ class RobotEnv(gym.Env):
 
         state_dict['joint_positions'] = joint_pos
         state_dict['joint_velocities'] = joint_vel
-        state_dict['gripper_velocity'] = gripper_state[1]
+        state_dict['gripper_velocity'] = np.array(gripper_state[1])
         return state_dict, joy_action, joy_logistics, camera
     
 
@@ -313,20 +314,23 @@ class RobotEnv(gym.Env):
 
         state_dict['joint_positions'] = self._robot.get_joint_positions()
         state_dict['joint_velocities'] = self._robot.get_joint_velocities()
-        state_dict['gripper_velocity'] = gripper_state[1]
+        state_dict['gripper_velocity'] = np.array(gripper_state[1])
+
 
         return state_dict
 
     def get_observation(self, include_images=True, include_robot_state=True, state_dict = None):
         obs_dict = {}
         if include_images:
-            obs_dict['agentview_image'] = self.get_images()[0]["array"].transpose(2, 0, 1).astype(np.float64) #hacky, but it works for now!
+            obs_dict['agentview_image'] = self.get_images()[0]["array"].transpose(2, 0, 1).astype(np.float32) / 255. #hacky, but it works for now!
         if include_robot_state:
             if state_dict == None:
                 s_dict = self.get_state()
             else:
                 s_dict = state_dict
+            # typecast for compatibiltiy
             obs_dict.update(s_dict)
+
         return obs_dict
 
     def render(self, height, width, mode):
