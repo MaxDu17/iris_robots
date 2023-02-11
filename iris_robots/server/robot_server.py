@@ -80,6 +80,7 @@ def get_set_all():
     feasible_pos, feasbile_angle = robot_controller.update_pose(pos, angle)
     close_percentage = np.array(request.json['gripper'])
     robot_controller.update_gripper(close_percentage)
+    # print("updated!")
 
     # print("EEPOSE")
     action = xbox_controller.get_action()
@@ -89,9 +90,11 @@ def get_set_all():
     robot_gripper_state = robot_controller.get_gripper_state()
     joint_angle = robot_controller.get_joint_positions()
     joint_vel = robot_controller.get_joint_velocities()
+    # print("all info gotten!")
 
     camera_feed = camera_reader.read_cameras()
     this_camera = camera_feed[0]["array"] #TEMP SOLUTION
+    # print("camera!")
 
     return jsonify({"joy_action": np.array(action).tolist(),
     "joy_logistics" : np.array(logistics).tolist(),

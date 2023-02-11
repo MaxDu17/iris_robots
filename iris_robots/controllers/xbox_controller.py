@@ -71,7 +71,8 @@ class XboxController:
 
         # Process Gripper Action
         self._update_gripper_state(self.joystick.get_button(1))
-        gripper_action = [self.gripper_closed * 2 - 1]
+        # gripper_action = [self.gripper_closed * 2 - 1]
+        gripper_action = [self.gripper_closed]
 
         #return np.array([x, y, z, pitch, roll, gripper])
         return np.concatenate([pose_action, gripper_action])

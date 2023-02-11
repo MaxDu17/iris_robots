@@ -10,7 +10,7 @@ def gather_cv2_cameras(max_ind=20, img_size = 84):
         cap.set(cv2.CAP_PROP_AUTOFOCUS, 0)
         # set exposure to value
         cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 1)  # manual mode
-        cap.set(cv2.CAP_PROP_EXPOSURE, 100) #iterate on this
+        cap.set(cv2.CAP_PROP_EXPOSURE, 250) #iterate on this
         if cap.read()[0]:
             camera = CV2Camera(cap, img_size)
             all_cv2_cameras.append(camera)
